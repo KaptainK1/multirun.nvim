@@ -1,0 +1,162 @@
+local M = {}
+
+local builtin = require("telescope.builtin")
+local actions = require("telescope.actions")
+local action_state = require("telescope.actions.state")
+local files = {}
+
+local pickers = require("telescope.pickers")
+local finders = require("telescope.finders")
+local conf = require("telescope.config").values
+local project_window = nil
+local main_buffer = 0
+
+function M.curl_test(project)
+	local Job = require("plenary.job")
+
+	vim.cmd("vsplit")
+	local win = vim.api.nvim_get_current_win()
+	local buf = vim.api.nvim_create_buf(true, true)
+	vim.api.nvim_win_set_buf(win, buf)
+
+	Job:new({
+		command = "dotnet",
+		args = { "run", "--project", project },
+		on_stdout = function(err, data)
+			print(vim.inspect(data))
+			if data ~= nil or data ~= "" then
+				local bufnr = vim.api.nvim_get_current_buf()
+				print("bufnr >>> " .. bufnr)
+				vim.api.nvim_buf_set_lines(bufnr, -1, -1, true, data)
+			end
+		end,
+	}):start()
+end
+
+vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
+vim.api.nvim_create_user_command("RunProject", function(opts)
+	local on_strout = function(err, data)
+		if not data or data ~= "" then
+			print(vim.inspect(err))
+			if data == nil then
+				print(vim.inspect(data))
+			else
+				local str = data:gsub("[\n\r]", " ")
+				vim.schedule(function()
+					local bufnr = tonumber(opts.fargs[2])
+					if bufnr == nil then
+						error("buffer not valid")
+					else
+						vim.api.nvim_buf_set_lines(bufnr, -1, -1, true, { str })
+					end
+				end)
+			end
+		end
+	end
+
+	local on_exit = function(err, data)
+		vim.inspect(err)
+		vim.inspect(data)
+	end
+
+	local obj = vim.system(
+		{ "dotnet", "run", "--project", opts.fargs[1] },
+		{ text = true, stdout = on_strout, stderr = on_exit }
+	)
+	print(obj.pid)
+end, { nargs = "*" })
+
+--
+local function run_selection(prompt_bufnr, map)
+	actions.select_default:replace(function()
+		local test = action_state.get_current_picker(prompt_bufnr)
+		local values2 = test:get_multi_selection()
+
+		for _, value in ipairs(values2) do
+			table.insert(files, value[1])
+		end
+
+		actions.close(prompt_bufnr)
+		local str = ""
+
+		vim.api.nvim_command("tabe")
+		local tabs = vim.api.nvim_list_tabpages()
+		local last_tab = table.getn(tabs)
+		project_window = tabs[last_tab]
+
+		print(vim.inspect("tab >>> " .. project_window))
+		for key, value in pairs(files) do
+			--switch to project_window tabpage
+			local pagenr = vim.api.nvim_tabpage_get_number(project_window)
+			vim.api.nvim_command(pagenr .. "tabn")
+
+			local buf = vim.api.nvim_create_buf(true, false)
+			local win = vim.api.nvim_open_win(buf, false, {
+				split = "left",
+				win = 0,
+			})
+
+			vim.api.nvim_win_set_buf(win, buf)
+			vim.cmd.RunProject(value, buf)
+		end
+	end)
+	return true
+end
+
+--picker to get all csproj files
+local startup_picker = function(opts)
+	opts = opts or {}
+	opts.find_command = { "fd", "--type", "f", "--glob", "--absolute-path", "*.csproj" }
+	opts.prompt_title = "CS Projects"
+	opts.attach_mappings = run_selection
+	builtin.find_files(opts)
+end
+
+--test picker to get all multi selections and add them to the files table
+local colors = function(opts)
+	opts = opts or {}
+	pickers
+		.new(opts, {
+			prompt_title = "colors",
+			finder = finders.new_table({
+				results = { "red", "green", "blue" },
+			}),
+			sorter = conf.generic_sorter(opts),
+			attach_mappings = function(prompt_bufnr, map)
+				actions.select_default:replace(function()
+					local test = action_state.get_current_picker(prompt_bufnr)
+					--local values = test.get_multi_selection()
+					--blueprint(vim.inspect(test))
+					--print(vim.inspect(test._multi._entries))
+					local values = test._multi._entries
+
+					local values2 = test:get_multi_selection()
+					--print(vim.inspect(values2))
+					--print(values)
+					--print(vim.inspect(values))
+					--print(vim.inspect(table.getn(values2)))
+
+					for _, value in ipairs(values2) do
+						table.insert(files, value[1])
+					end
+
+					print(vim.inspect(table.getn(files)))
+					local str = ""
+					for key, value in pairs(files) do
+						str = str .. value
+					end
+
+					print(vim.inspect(str))
+					actions.close(prompt_bufnr)
+				end)
+				return true
+			end,
+		})
+		:find()
+end
+
+-- to execute the function
+--colors(require("telescope.themes").get_dropdown({}))
+main_buffer = vim.api.nvim_get_current_buf()
+startup_picker(require("telescope.themes").get_dropdown({}))
+return M
