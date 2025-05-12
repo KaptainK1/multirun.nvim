@@ -12,29 +12,21 @@ local project_window = nil
 local pids = {}
 local shared_sln = true
 
-function M.curl_test(project)
-	local Job = require("plenary.job")
-
-	vim.cmd("vsplit")
-	local win = vim.api.nvim_get_current_win()
-	local buf = vim.api.nvim_create_buf(true, true)
-	vim.api.nvim_win_set_buf(win, buf)
-
-	Job:new({
-		command = "dotnet",
-		args = { "run", "--project", project },
-		on_stdout = function(err, data)
-			print(vim.inspect(data))
-			if data ~= nil or data ~= "" then
-				local bufnr = vim.api.nvim_get_current_buf()
-				print("bufnr >>> " .. bufnr)
-				vim.api.nvim_buf_set_lines(bufnr, -1, -1, true, data)
-			end
-		end,
-	}):start()
-end
-
 vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
+
+vim.api.nvim_create_user_command("KillRunningProjects", function()
+	local on_stdout = function(err, data)
+		print(vim.inspect(data))
+	end
+
+	for _, pid in ipairs(pids) do
+		print("pid from kill >>> " .. vim.inspect(pid))
+		vim.schedule(function()
+			vim.system({ "kill", "-9", pid }, { text = true, stdout = on_stdout })
+		end)
+	end
+end, { nargs = 0 })
+
 vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function(opts)
 	local on_exit = function()
 		vim.schedule(function()
@@ -48,6 +40,7 @@ vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function(opts)
 
 	local obj = vim.system({ "dotnet", "build", opts.fargs[1] }, { text = true, stdout = on_stdout }, on_exit)
 end, { nargs = "*" })
+
 vim.api.nvim_create_user_command("RunProject", function(opts)
 	local on_strout = function(err, data)
 		if not data or data ~= "" then
@@ -68,9 +61,13 @@ vim.api.nvim_create_user_command("RunProject", function(opts)
 		end
 	end
 
-	local on_exit = function(err, data)
+	local on_stderr = function(err, data)
 		vim.inspect(err)
 		vim.inspect(data)
+	end
+
+	local on_exit = function()
+		print("Project " .. opts.fargs[1] .. " killed.")
 	end
 
 	local no_build = ""
@@ -81,7 +78,8 @@ vim.api.nvim_create_user_command("RunProject", function(opts)
 
 	local obj = vim.system(
 		{ "dotnet", "run", no_build, "--project", opts.fargs[1] },
-		{ text = true, stdout = on_strout, stderr = on_exit }
+		{ text = true, stdout = on_strout, stderr = on_stderr },
+		on_exit
 	)
 	print(obj.pid)
 	table.insert(pids, obj.pid)
