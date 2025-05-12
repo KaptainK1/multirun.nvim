@@ -9,7 +9,8 @@ local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local conf = require("telescope.config").values
 local project_window = nil
-local main_buffer = 0
+local pids = {}
+local shared_sln = true
 
 function M.curl_test(project)
 	local Job = require("plenary.job")
@@ -34,6 +35,19 @@ function M.curl_test(project)
 end
 
 vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
+vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function(opts)
+	local on_exit = function()
+		vim.schedule(function()
+			vim.cmd.RunProject(opts.fargs[1], opts.fargs[2])
+		end)
+	end
+
+	local on_stdout = function(err, data)
+		print(vim.inspect(data))
+	end
+
+	local obj = vim.system({ "dotnet", "build", opts.fargs[1] }, { text = true, stdout = on_stdout }, on_exit)
+end, { nargs = "*" })
 vim.api.nvim_create_user_command("RunProject", function(opts)
 	local on_strout = function(err, data)
 		if not data or data ~= "" then
@@ -59,11 +73,18 @@ vim.api.nvim_create_user_command("RunProject", function(opts)
 		vim.inspect(data)
 	end
 
+	local no_build = ""
+
+	if shared_sln then
+		no_build = "--no-build"
+	end
+
 	local obj = vim.system(
-		{ "dotnet", "run", "--project", opts.fargs[1] },
+		{ "dotnet", "run", no_build, "--project", opts.fargs[1] },
 		{ text = true, stdout = on_strout, stderr = on_exit }
 	)
 	print(obj.pid)
+	table.insert(pids, obj.pid)
 end, { nargs = "*" })
 
 --
@@ -77,7 +98,6 @@ local function run_selection(prompt_bufnr, map)
 		end
 
 		actions.close(prompt_bufnr)
-		local str = ""
 
 		vim.api.nvim_command("tabe")
 		local tabs = vim.api.nvim_list_tabpages()
@@ -97,7 +117,11 @@ local function run_selection(prompt_bufnr, map)
 			})
 
 			vim.api.nvim_win_set_buf(win, buf)
-			vim.cmd.RunProject(value, buf)
+			if shared_sln then
+				vim.cmd.DotnetBuildAndRunProject(value, buf)
+			else
+				vim.cmd.RunProject(value, buf)
+			end
 		end
 	end)
 	return true
