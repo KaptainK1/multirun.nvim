@@ -17,7 +17,7 @@ end
 
 vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
 
-vim.api.nvim_create_user_command("KillRunningProjects", function()
+vim.api.nvim_create_user_command("DotnetStopRunningProjects", function()
 	for _, pid in ipairs(pids) do
 		vim.uv.kill(pid, "sigterm")
 	end
@@ -82,6 +82,7 @@ local function run(run_build_sep)
 	vim.api.nvim_command("tabe")
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
+	print(vim.inspect(tabs))
 	project_window = tabs[last_tab]
 
 	for _, value in pairs(files) do
@@ -135,10 +136,13 @@ vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function()
 	run(true)
 end, { nargs = 0 })
 
-vim.api.nvim_create_user_command("RunProject", function()
+vim.api.nvim_create_user_command("DotnetRunProject", function()
 	run(false)
 end, { nargs = 0 })
 
+vim.api.nvim_create_user_command("DotnetStartPicker", function()
+	M.startup_picker(require("telescope.themes").get_dropdown({}))
+end, { nargs = 0 })
+
 M.setup()
-M.startup_picker(require("telescope.themes").get_dropdown({}))
 return M
