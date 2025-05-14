@@ -15,33 +15,12 @@ local shared_sln = true
 vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
 
 vim.api.nvim_create_user_command("KillRunningProjects", function()
-	local on_stdout = function(err, data)
-		print(vim.inspect(data))
-	end
-
 	for _, pid in ipairs(pids) do
-		print("pid from kill >>> " .. vim.inspect(pid))
-		vim.schedule(function()
-			vim.system({ "kill", "-9", pid }, { text = true, stdout = on_stdout })
-		end)
+		vim.uv.kill(pid, "sigterm")
 	end
 end, { nargs = 0 })
 
-vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function(opts)
-	local on_exit = function()
-		vim.schedule(function()
-			vim.cmd.RunProject(opts.fargs[1], opts.fargs[2])
-		end)
-	end
-
-	local on_stdout = function(err, data)
-		print(vim.inspect(data))
-	end
-
-	local obj = vim.system({ "dotnet", "build", opts.fargs[1] }, { text = true, stdout = on_stdout }, on_exit)
-end, { nargs = "*" })
-
-vim.api.nvim_create_user_command("RunProject", function(opts)
+local function rum_command(bufnr, project, no_build)
 	local on_strout = function(err, data)
 		if not data or data ~= "" then
 			print(vim.inspect(err))
@@ -50,7 +29,6 @@ vim.api.nvim_create_user_command("RunProject", function(opts)
 			else
 				local str = data:gsub("[\n\r]", " ")
 				vim.schedule(function()
-					local bufnr = tonumber(opts.fargs[2])
 					if bufnr == nil then
 						error("buffer not valid")
 					else
@@ -67,23 +45,58 @@ vim.api.nvim_create_user_command("RunProject", function(opts)
 	end
 
 	local on_exit = function()
-		print("Project " .. opts.fargs[1] .. " killed.")
-	end
-
-	local no_build = ""
-
-	if shared_sln then
-		no_build = "--no-build"
+		print("project " .. project .. " killed.")
 	end
 
 	local obj = vim.system(
-		{ "dotnet", "run", no_build, "--project", opts.fargs[1] },
+		{ "dotnet", "run", no_build, "--project", project },
 		{ text = true, stdout = on_strout, stderr = on_stderr },
 		on_exit
 	)
-	print(obj.pid)
 	table.insert(pids, obj.pid)
-end, { nargs = "*" })
+end
+
+local function build_and_run(bufnr, project, no_build)
+	local on_exit = function()
+		vim.schedule(function()
+			rum_command(bufnr, project, no_build)
+		end)
+	end
+
+	local on_stdout = function(err, data)
+		print(vim.inspect(data))
+	end
+
+	vim.system({ "dotnet", "build", project }, { text = true, stdout = on_stdout }, on_exit)
+end
+
+local function run(run_build_sep)
+	vim.api.nvim_command("tabe")
+	local tabs = vim.api.nvim_list_tabpages()
+	local last_tab = table.getn(tabs)
+	project_window = tabs[last_tab]
+
+	for _, value in pairs(files) do
+		--switch to project_window tabpage
+		local pagenr = vim.api.nvim_tabpage_get_number(project_window)
+		vim.api.nvim_command(pagenr .. "tabn")
+
+		local buf = vim.api.nvim_create_buf(true, false)
+		local win = vim.api.nvim_open_win(buf, false, {
+			split = "left",
+			win = 0,
+		})
+
+		vim.api.nvim_win_set_buf(win, buf)
+		local no_build = ""
+		if run_build_sep then
+			no_build = "--no-build"
+			build_and_run(buf, value, no_build)
+		else
+			rum_command(buf, value, no_build)
+		end
+	end
+end
 
 --
 local function run_selection(prompt_bufnr, map)
@@ -96,43 +109,27 @@ local function run_selection(prompt_bufnr, map)
 		end
 
 		actions.close(prompt_bufnr)
-
-		vim.api.nvim_command("tabe")
-		local tabs = vim.api.nvim_list_tabpages()
-		local last_tab = table.getn(tabs)
-		project_window = tabs[last_tab]
-
-		print(vim.inspect("tab >>> " .. project_window))
-		for key, value in pairs(files) do
-			--switch to project_window tabpage
-			local pagenr = vim.api.nvim_tabpage_get_number(project_window)
-			vim.api.nvim_command(pagenr .. "tabn")
-
-			local buf = vim.api.nvim_create_buf(true, false)
-			local win = vim.api.nvim_open_win(buf, false, {
-				split = "left",
-				win = 0,
-			})
-
-			vim.api.nvim_win_set_buf(win, buf)
-			if shared_sln then
-				vim.cmd.DotnetBuildAndRunProject(value, buf)
-			else
-				vim.cmd.RunProject(value, buf)
-			end
-		end
+		run(shared_sln)
 	end)
 	return true
 end
 
 --picker to get all csproj files
-local startup_picker = function(opts)
+M.startup_picker = function(opts)
 	opts = opts or {}
 	opts.find_command = { "fd", "--type", "f", "--glob", "--absolute-path", "*.csproj" }
 	opts.prompt_title = "CS Projects"
 	opts.attach_mappings = run_selection
 	builtin.find_files(opts)
 end
+
+vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function()
+	run(true)
+end, { nargs = 0 })
+
+vim.api.nvim_create_user_command("RunProject", function()
+	run(false)
+end, { nargs = 0 })
 
 --test picker to get all multi selections and add them to the files table
 local colors = function(opts)
@@ -179,6 +176,5 @@ end
 
 -- to execute the function
 --colors(require("telescope.themes").get_dropdown({}))
-main_buffer = vim.api.nvim_get_current_buf()
-startup_picker(require("telescope.themes").get_dropdown({}))
+M.startup_picker(require("telescope.themes").get_dropdown({}))
 return M

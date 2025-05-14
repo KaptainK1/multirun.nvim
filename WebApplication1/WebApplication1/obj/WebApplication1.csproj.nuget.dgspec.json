@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj": {}
+    "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj": {}
   },
   "projects": {
-    "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj": {
+    "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj",
+        "projectUniqueName": "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj",
         "projectName": "WebApplication1",
-        "projectPath": "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj",
+        "projectPath": "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication1/WebApplication1.csproj",
         "packagesPath": "/Users/dhoffman/.nuget/packages/",
-        "outputPath": "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication1/obj/",
+        "outputPath": "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication1/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/dhoffman/.nuget/NuGet/NuGet.Config"

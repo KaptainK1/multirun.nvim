@@ -487,11 +487,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication2/WebApplication2.csproj",
+      "projectUniqueName": "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication2/WebApplication2.csproj",
       "projectName": "WebApplication2",
-      "projectPath": "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication2/WebApplication2.csproj",
+      "projectPath": "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication2/WebApplication2.csproj",
       "packagesPath": "/Users/dhoffman/.nuget/packages/",
-      "outputPath": "/Users/dhoffman/plugins/multirun.nvim/WebApplication1/WebApplication2/obj/",
+      "outputPath": "/Users/dhoffman/source/multirun.nvim/multirun.nvim/WebApplication1/WebApplication2/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/dhoffman/.nuget/NuGet/NuGet.Config"
