@@ -24,7 +24,7 @@ vim.api.nvim_create_user_command("KillRunningProjects", function()
 
 	local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
 	for _, win in ipairs(project_wins) do
-		vim.api.nvim_win_close(win, true)
+		vim.api.nvim_win_close(win, false)
 	end
 end, { nargs = 0 })
 
