@@ -8,7 +8,7 @@ local files = {}
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local conf = require("telescope.config").values
-local project_window = nil
+local project_window
 local pids = {}
 local shared_sln = true
 
@@ -17,6 +17,11 @@ vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true }
 vim.api.nvim_create_user_command("KillRunningProjects", function()
 	for _, pid in ipairs(pids) do
 		vim.uv.kill(pid, "sigterm")
+	end
+
+	local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
+	for _, win in ipairs(project_wins) do
+		vim.api.nvim_win_close(win, true)
 	end
 end, { nargs = 0 })
 
