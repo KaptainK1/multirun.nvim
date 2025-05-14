@@ -3,14 +3,17 @@ local M = {}
 local builtin = require("telescope.builtin")
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
-local files = {}
 
-local pickers = require("telescope.pickers")
-local finders = require("telescope.finders")
-local conf = require("telescope.config").values
+local files = {}
 local project_window
 local pids = {}
 local shared_sln = true
+
+M.setup = function(opts)
+	opts = opts or {}
+	opts.shared_sln = opts.shared_sln or true
+	shared_sln = opts.shared_sln
+end
 
 vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
 
@@ -106,10 +109,10 @@ end
 --
 local function run_selection(prompt_bufnr, map)
 	actions.select_default:replace(function()
-		local test = action_state.get_current_picker(prompt_bufnr)
-		local values2 = test:get_multi_selection()
+		local cur_picker = action_state.get_current_picker(prompt_bufnr)
+		local selections = cur_picker:get_multi_selection()
 
-		for _, value in ipairs(values2) do
+		for _, value in ipairs(selections) do
 			table.insert(files, value[1])
 		end
 
@@ -136,50 +139,6 @@ vim.api.nvim_create_user_command("RunProject", function()
 	run(false)
 end, { nargs = 0 })
 
---test picker to get all multi selections and add them to the files table
-local colors = function(opts)
-	opts = opts or {}
-	pickers
-		.new(opts, {
-			prompt_title = "colors",
-			finder = finders.new_table({
-				results = { "red", "green", "blue" },
-			}),
-			sorter = conf.generic_sorter(opts),
-			attach_mappings = function(prompt_bufnr, map)
-				actions.select_default:replace(function()
-					local test = action_state.get_current_picker(prompt_bufnr)
-					--local values = test.get_multi_selection()
-					--blueprint(vim.inspect(test))
-					--print(vim.inspect(test._multi._entries))
-					local values = test._multi._entries
-
-					local values2 = test:get_multi_selection()
-					--print(vim.inspect(values2))
-					--print(values)
-					--print(vim.inspect(values))
-					--print(vim.inspect(table.getn(values2)))
-
-					for _, value in ipairs(values2) do
-						table.insert(files, value[1])
-					end
-
-					print(vim.inspect(table.getn(files)))
-					local str = ""
-					for key, value in pairs(files) do
-						str = str .. value
-					end
-
-					print(vim.inspect(str))
-					actions.close(prompt_bufnr)
-				end)
-				return true
-			end,
-		})
-		:find()
-end
-
--- to execute the function
---colors(require("telescope.themes").get_dropdown({}))
+M.setup()
 M.startup_picker(require("telescope.themes").get_dropdown({}))
 return M
