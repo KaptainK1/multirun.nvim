@@ -24,7 +24,7 @@ vim.api.nvim_create_user_command("DotnetStopRunningProjects", function()
 
 	local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
 	for _, win in ipairs(project_wins) do
-		vim.api.nvim_win_close(win, false)
+		vim.api.nvim_win_close(win, true)
 	end
 end, { nargs = 0 })
 
@@ -140,9 +140,8 @@ vim.api.nvim_create_user_command("DotnetRunProject", function()
 	run(false)
 end, { nargs = 0 })
 
-vim.api.nvim_create_user_command("DotnetStartPicker", function()
+M.start_picker = vim.api.nvim_create_user_command("DotnetStartPicker", function()
 	M.startup_picker(require("telescope.themes").get_dropdown({}))
 end, { nargs = 0 })
 
-M.setup()
 return M
