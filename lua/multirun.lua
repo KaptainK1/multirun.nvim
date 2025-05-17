@@ -19,16 +19,13 @@ vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true }
 
 vim.api.nvim_create_user_command("DotnetStopRunningProjects", function()
 	for _, pid in ipairs(pids) do
-		vim.uv.kill(pid, "sigterm")
+		vim.system({ "kill", "-15", pid }, { text = true })
+		--vim.uv.kill(pid, "sigterm")
 	end
-
-	local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
-	for _, win in ipairs(project_wins) do
-		vim.api.nvim_win_close(win, true)
-	end
+	pids = {}
 end, { nargs = 0 })
 
-local function rum_command(bufnr, project, no_build)
+local function run_command(bufnr, project, no_build)
 	local on_strout = function(err, data)
 		if not data or data ~= "" then
 			print(vim.inspect(err))
@@ -53,7 +50,18 @@ local function rum_command(bufnr, project, no_build)
 	end
 
 	local on_exit = function()
-		print("project " .. project .. " killed.")
+		vim.schedule(function()
+			local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
+			for _, win in ipairs(project_wins) do
+				--local win_info = vim.fn.getwininfo(win)
+				local bufnr = vim.api.nvim_win_get_buf(win)
+				--vim.api.nvim_buf_delete(bufnr, { force = true, unload = true })
+				vim.bo.buflisted = false
+				vim.api.nvim_buf_delete(bufnr, { force = true })
+				--vim.api.nvim_win_close(win, true)
+			end
+		end)
+		print("project " .. project .. " killed")
 	end
 
 	local obj = vim.system(
@@ -67,7 +75,7 @@ end
 local function build_and_run(bufnr, project, no_build)
 	local on_exit = function()
 		vim.schedule(function()
-			rum_command(bufnr, project, no_build)
+			run_command(bufnr, project, no_build)
 		end)
 	end
 
@@ -84,17 +92,27 @@ local function run(run_build_sep)
 	local last_tab = table.getn(tabs)
 	print(vim.inspect(tabs))
 	project_window = tabs[last_tab]
+	local create_new_window = false
 
 	for _, value in pairs(files) do
 		--switch to project_window tabpage
 		local pagenr = vim.api.nvim_tabpage_get_number(project_window)
 		vim.api.nvim_command(pagenr .. "tabn")
 
-		local buf = vim.api.nvim_create_buf(true, false)
-		local win = vim.api.nvim_open_win(buf, false, {
-			split = "left",
-			win = 0,
-		})
+		--since tabe creates a new win and buf, skip creating a new one first time around
+		local buf = 0
+		local win = 0
+		if create_new_window then
+			buf = vim.api.nvim_create_buf(true, false)
+			win = vim.api.nvim_open_win(buf, false, {
+				split = "right",
+				win = 0,
+			})
+		else
+			win = vim.api.nvim_tabpage_get_win(project_window)
+			buf = vim.api.nvim_win_get_buf(win)
+			create_new_window = true
+		end
 
 		vim.api.nvim_win_set_buf(win, buf)
 		local no_build = ""
@@ -102,7 +120,7 @@ local function run(run_build_sep)
 			no_build = "--no-build"
 			build_and_run(buf, value, no_build)
 		else
-			rum_command(buf, value, no_build)
+			run_command(buf, value, no_build)
 		end
 	end
 end
@@ -112,6 +130,7 @@ local function run_selection(prompt_bufnr, map)
 	actions.select_default:replace(function()
 		local cur_picker = action_state.get_current_picker(prompt_bufnr)
 		local selections = cur_picker:get_multi_selection()
+		files = {}
 
 		for _, value in ipairs(selections) do
 			table.insert(files, value[1])
