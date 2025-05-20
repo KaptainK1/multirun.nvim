@@ -15,17 +15,33 @@ M.setup = function(opts)
 	shared_sln = opts.shared_sln
 end
 
+local function remove_pid(pid)
+	local index = -1
+
+	for i, value in ipairs(pids) do
+		if value == pid then
+			index = i
+			break
+		end
+	end
+
+	if index ~= -1 then
+		table.remove(pids, index)
+	end
+end
+
 vim.api.nvim_create_user_command("DotnetBuild", "!dotnet build", { bang = true })
 
-vim.api.nvim_create_user_command("DotnetStopRunningProjects", function()
+M.dotnet_stop_projects = vim.api.nvim_create_user_command("DotnetStopRunningProjects", function()
 	for _, pid in ipairs(pids) do
-		vim.system({ "kill", "-15", pid }, { text = true })
-		--vim.uv.kill(pid, "sigterm")
+		vim.uv.kill(pid, "sigterm")
+		--vim.system({ "kill", "-15", pid }, { text = true })
 	end
 	pids = {}
 end, { nargs = 0 })
 
 local function run_command(bufnr, project, no_build)
+	local running_process = {}
 	local on_strout = function(err, data)
 		if not data or data ~= "" then
 			print(vim.inspect(err))
@@ -53,23 +69,23 @@ local function run_command(bufnr, project, no_build)
 		vim.schedule(function()
 			local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
 			for _, win in ipairs(project_wins) do
-				--local win_info = vim.fn.getwininfo(win)
-				local bufnr = vim.api.nvim_win_get_buf(win)
-				--vim.api.nvim_buf_delete(bufnr, { force = true, unload = true })
+				local buf = vim.api.nvim_win_get_buf(win)
 				vim.bo.buflisted = false
-				vim.api.nvim_buf_delete(bufnr, { force = true })
-				--vim.api.nvim_win_close(win, true)
+				vim.api.nvim_buf_delete(buf, { force = true })
 			end
 		end)
-		print("project " .. project .. " killed")
+		if running_process.pid ~= nil then
+			remove_pid(running_process.pid)
+			print(vim.inspect(pids))
+		end
 	end
 
-	local obj = vim.system(
+	running_process = vim.system(
 		{ "dotnet", "run", no_build, "--project", project },
 		{ text = true, stdout = on_strout, stderr = on_stderr },
 		on_exit
 	)
-	table.insert(pids, obj.pid)
+	table.insert(pids, running_process.pid)
 end
 
 local function build_and_run(bufnr, project, no_build)
@@ -90,7 +106,6 @@ local function run(run_build_sep)
 	vim.api.nvim_command("tabe")
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
-	print(vim.inspect(tabs))
 	project_window = tabs[last_tab]
 	local create_new_window = false
 
@@ -142,25 +157,21 @@ local function run_selection(prompt_bufnr, map)
 	return true
 end
 
+M.dotnet_build_and_run = vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function()
+	run(true)
+end, { nargs = 0 })
+
+M.dotnet_run = vim.api.nvim_create_user_command("DotnetRunProject", function()
+	run(false)
+end, { nargs = 0 })
+
 --picker to get all csproj files
-M.startup_picker = function(opts)
-	opts = opts or {}
+M.start_picker = vim.api.nvim_create_user_command("DotnetStartPicker", function()
+	local opts = require("telescope.themes").get_dropdown({})
 	opts.find_command = { "fd", "--type", "f", "--glob", "--absolute-path", "*.csproj" }
 	opts.prompt_title = "CS Projects"
 	opts.attach_mappings = run_selection
 	builtin.find_files(opts)
-end
-
-vim.api.nvim_create_user_command("DotnetBuildAndRunProject", function()
-	run(true)
-end, { nargs = 0 })
-
-vim.api.nvim_create_user_command("DotnetRunProject", function()
-	run(false)
-end, { nargs = 0 })
-
-M.start_picker = vim.api.nvim_create_user_command("DotnetStartPicker", function()
-	M.startup_picker(require("telescope.themes").get_dropdown({}))
 end, { nargs = 0 })
 
 return M
