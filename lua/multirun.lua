@@ -122,21 +122,6 @@ M.close_project_windows = vim.api.nvim_create_user_command("DotnetCloseProjectWi
 	end
 end, { nargs = 0 })
 
----@param project string: project file to be acted on
----@param on_exit function: function to be passed to vim.system command for when the command exits
----@param on_stdout function: function to be passed to vim.system command for stdout
-local function build_command(project, on_exit, on_stdout)
-	on_stdout = on_stdout or function(err, data)
-		print(vim.inspect(data))
-	end
-
-	on_exit = on_exit or function(obj)
-		print(vim.inspect(obj))
-	end
-
-	vim.system({ "dotnet", "build", project }, { text = true, stdout = on_stdout }, on_exit)
-end
-
 local function create_windows(create_new_window)
 	local pagenr = vim.api.nvim_tabpage_get_number(project_window)
 	vim.api.nvim_command(pagenr .. "tabn")
@@ -208,7 +193,7 @@ local function build_and_run_command(solution)
 		end
 	end
 
-	build_command(solution, on_exit, on_stdout_build)
+	vim.system({ "dotnet", "build", solution }, { text = true, stdout = on_stdout_build }, on_exit)
 end
 
 local function execute_command()
@@ -253,7 +238,7 @@ local function execute_command()
 			if selected_cmd == commands.Run then
 				run_command(project, "", on_stdout)
 			else
-				build_command(project, nil, on_stdout)
+				vim.system({ "dotnet", "build", project }, { text = true, stdout = on_stdout })
 			end
 		end
 	end
