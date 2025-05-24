@@ -71,7 +71,7 @@ local function find_sln_file(project_path)
 end
 
 ---@note command for stopping all running processes and closes the windown and buffers
-M.dotnet_stop_projects = vim.api.nvim_create_user_command("DotnetStopRunningProjects", function()
+M.multirun_stop_projects = vim.api.nvim_create_user_command("MultirunStopRunningProjects", function()
 	for _, pid in ipairs(pids) do
 		vim.uv.kill(pid, "sigterm")
 		--vim.system({ "kill", "-15", pid }, { text = true })
@@ -93,7 +93,7 @@ local function run_command(project, no_build, on_stdout)
 	local on_exit = function()
 		vim.schedule(function()
 			if config.auto_close_project_window then
-				vim.cmd.DotnetCloseProjectWindows()
+				vim.cmd.MultirunCloseProjectWindows()
 			end
 		end)
 
@@ -111,7 +111,7 @@ local function run_command(project, no_build, on_stdout)
 end
 
 ---@note command to close project windows and buffers WITHOUT SAVING.
-M.close_project_windows = vim.api.nvim_create_user_command("DotnetCloseProjectWindows", function()
+M.multirun_close_project_windows = vim.api.nvim_create_user_command("MultirunCloseProjectWindows", function()
 	if project_window ~= -1 then
 		local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
 		for _, win in ipairs(project_wins) do
@@ -198,10 +198,10 @@ end
 
 local function execute_command()
 	if config.auto_close_project_window then
-		vim.cmd.DotnetCloseProjectWindows()
+		vim.cmd.MultirunCloseProjectWindows()
 	end
 	if table.getn(files) < 1 then
-		print("no files selected. Run command DotnetStartPicker to launch pickers")
+		print("no files selected. Run command MultirunStart to launch pickers")
 		return
 	end
 	vim.api.nvim_command("tabe")
@@ -261,7 +261,7 @@ local function run_selection(prompt_bufnr, map)
 end
 
 --- @note runs the previously selected command with the previously selected files
-M.dotnet_run_previous = vim.api.nvim_create_user_command("DotnetRunPrevious", function()
+M.multirun_previous = vim.api.nvim_create_user_command("MultirunPrevious", function()
 	if table.getn(files) < 1 then
 		print("no files selected. Run command DotnetStartPicker to launch pickers")
 	else
@@ -280,7 +280,7 @@ end
 --- @enum Run will build then run the project, runs the dotnet run command so should be used for separate Projects
 --- @enum BuildAndRun will execute a build command separatly then Run command once the build is done. Runs the dotnet run --nobuild command
 --- @enum Build runs the build command for the selected project
-M.run = vim.api.nvim_create_user_command("DotnetStartPicker", function()
+M.multirun = vim.api.nvim_create_user_command("MultirunStart", function()
 	local opts = require("telescope.themes").get_dropdown({})
 	pickers
 		.new(opts, {
