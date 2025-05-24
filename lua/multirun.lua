@@ -56,6 +56,7 @@ local function remove_pid(pid)
 	end
 end
 
+---@param project_path string: path to one of the project files to use as a starting point to find a sln file by searching up the dir tree
 local function find_sln_file(project_path)
 	local sln_files = vim.fs.find(function(name, path)
 		return name:match(".*%.sln$")
@@ -122,7 +123,7 @@ M.close_project_windows = vim.api.nvim_create_user_command("DotnetCloseProjectWi
 	end
 end, { nargs = 0 })
 
-local function create_windows(create_new_window)
+local function create_window(create_new_window)
 	local pagenr = vim.api.nvim_tabpage_get_number(project_window)
 	vim.api.nvim_command(pagenr .. "tabn")
 
@@ -138,7 +139,6 @@ local function create_windows(create_new_window)
 	else
 		win = vim.api.nvim_tabpage_get_win(project_window)
 		buf = vim.api.nvim_win_get_buf(win)
-		create_new_window = true
 	end
 
 	vim.api.nvim_win_set_buf(win, buf)
@@ -151,7 +151,7 @@ local function build_and_run_command(solution)
 		vim.schedule(function()
 			local create_new_window = false
 			for _, project in ipairs(files) do
-				local buf = create_windows(create_new_window)
+				local buf = create_window(create_new_window)
 				create_new_window = true
 				local on_stdout_run = function(err, data)
 					if not data or data ~= "" then
@@ -174,7 +174,7 @@ local function build_and_run_command(solution)
 		end)
 	end
 
-	local buf = create_windows(false)
+	local buf = create_window(false)
 
 	local on_stdout_build = function(err, data)
 		if not data or data ~= "" then
@@ -215,7 +215,7 @@ local function execute_command()
 		local create_new_window = false
 
 		for _, project in pairs(files) do
-			local buf = create_windows(create_new_window)
+			local buf = create_window(create_new_window)
 			create_new_window = true
 
 			local on_stdout = function(err, data)
