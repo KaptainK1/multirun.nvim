@@ -31,6 +31,14 @@ local commands = {
 	BuildAndRun = "build and run",
 }
 local selected_cmd = commands.Run
+local config = {
+	auto_close_project_window = true,
+}
+
+M.setup = function(opts)
+	opts = opts or {}
+	config.auto_close_project_window = opts.auto_close_project_window or true
+end
 
 ---@param pid number: pid to remove from the table
 local function remove_pid(pid)
@@ -46,6 +54,19 @@ local function remove_pid(pid)
 	if index ~= -1 then
 		table.remove(pids, index)
 	end
+end
+
+local function find_sln_file(project_path)
+	local sln_files = vim.fs.find(function(name, path)
+		return name:match(".*%.sln$")
+	end, {
+		limit = 1,
+		type = "file",
+		upward = true,
+		path = project_path,
+	})
+
+	return sln_files[1]
 end
 
 ---@note command for stopping all running processes and closes the windown and buffers
@@ -70,7 +91,9 @@ local function run_command(project, no_build, on_stdout)
 
 	local on_exit = function()
 		vim.schedule(function()
-			vim.cmd.DotnetCloseProjectWindows()
+			if config.auto_close_project_window then
+				vim.cmd.DotnetCloseProjectWindows()
+			end
 		end)
 
 		if running_process.pid ~= nil then
@@ -114,74 +137,124 @@ local function build_command(project, on_exit, on_stdout)
 	vim.system({ "dotnet", "build", project }, { text = true, stdout = on_stdout }, on_exit)
 end
 
----@param project string: project file to be acted on
----@param no_build string: --no-build parameter for dotnet run command
----@param on_stdout function: function to be passed to vim.system command for stdout
-local function build_and_run_command(project, no_build, on_stdout)
+local function create_windows(create_new_window)
+	local pagenr = vim.api.nvim_tabpage_get_number(project_window)
+	vim.api.nvim_command(pagenr .. "tabn")
+
+	--since tabe creates a new win and buf, skip creating a new one first time around
+	local buf = 0
+	local win = 0
+	if create_new_window then
+		buf = vim.api.nvim_create_buf(true, false)
+		win = vim.api.nvim_open_win(buf, false, {
+			split = "right",
+			win = 0,
+		})
+	else
+		win = vim.api.nvim_tabpage_get_win(project_window)
+		buf = vim.api.nvim_win_get_buf(win)
+		create_new_window = true
+	end
+
+	vim.api.nvim_win_set_buf(win, buf)
+	return buf
+end
+
+---@param solution string: project file to be acted on
+local function build_and_run_command(solution)
 	local on_exit = function()
 		vim.schedule(function()
-			run_command(project, no_build, on_stdout)
+			local create_new_window = false
+			for _, project in ipairs(files) do
+				local buf = create_windows(create_new_window)
+				create_new_window = true
+				local on_stdout_run = function(err, data)
+					if not data or data ~= "" then
+						if data == nil then
+							print(vim.inspect(data))
+						else
+							local str = data:gsub("[\n\r]", " ")
+							vim.schedule(function()
+								if buf == nil then
+									error("buffer not valid")
+								else
+									vim.api.nvim_buf_set_lines(buf, -1, -1, true, { str })
+								end
+							end)
+						end
+					end
+				end
+				run_command(project, "--no-build", on_stdout_run)
+			end
 		end)
 	end
 
-	build_command(project, on_exit, on_stdout)
+	local buf = create_windows(false)
+
+	local on_stdout_build = function(err, data)
+		if not data or data ~= "" then
+			if data == nil then
+				print(vim.inspect(data))
+			else
+				local str = data:gsub("[\n\r]", " ")
+				vim.schedule(function()
+					if buf == nil then
+						error("buffer not valid")
+					else
+						vim.api.nvim_buf_set_lines(buf, -1, -1, true, { str })
+					end
+				end)
+			end
+		end
+	end
+
+	build_command(solution, on_exit, on_stdout_build)
 end
 
 local function execute_command()
+	if config.auto_close_project_window then
+		vim.cmd.DotnetCloseProjectWindows()
+	end
+	if table.getn(files) < 1 then
+		print("no files selected. Run command DotnetStartPicker to launch pickers")
+		return
+	end
 	vim.api.nvim_command("tabe")
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
 	project_window = tabs[last_tab]
-	local create_new_window = false
+	if selected_cmd == commands.BuildAndRun then
+		local sln = find_sln_file(files[1])
+		build_and_run_command(sln)
+	else
+		local create_new_window = false
 
-	for _, project in pairs(files) do
-		--switch to project_window tabpage
-		local pagenr = vim.api.nvim_tabpage_get_number(project_window)
-		vim.api.nvim_command(pagenr .. "tabn")
-
-		--since tabe creates a new win and buf, skip creating a new one first time around
-		local buf = 0
-		local win = 0
-		if create_new_window then
-			buf = vim.api.nvim_create_buf(true, false)
-			win = vim.api.nvim_open_win(buf, false, {
-				split = "right",
-				win = 0,
-			})
-		else
-			win = vim.api.nvim_tabpage_get_win(project_window)
-			buf = vim.api.nvim_win_get_buf(win)
+		for _, project in pairs(files) do
+			local buf = create_windows(create_new_window)
 			create_new_window = true
-		end
 
-		vim.api.nvim_win_set_buf(win, buf)
-		local no_build = ""
-
-		local on_stdout = function(err, data)
-			if not data or data ~= "" then
-				print(vim.inspect(err))
-				if data == nil then
-					print(vim.inspect(data))
-				else
-					local str = data:gsub("[\n\r]", " ")
-					vim.schedule(function()
-						if buf == nil then
-							error("buffer not valid")
-						else
-							vim.api.nvim_buf_set_lines(buf, -1, -1, true, { str })
-						end
-					end)
+			local on_stdout = function(err, data)
+				if not data or data ~= "" then
+					if data == nil then
+						print(vim.inspect(data))
+					else
+						local str = data:gsub("[\n\r]", " ")
+						vim.schedule(function()
+							if buf == nil then
+								error("buffer not valid")
+							else
+								vim.api.nvim_buf_set_lines(buf, -1, -1, true, { str })
+							end
+						end)
+					end
 				end
 			end
-		end
 
-		if selected_cmd == commands.BuildAndRun then
-			no_build = "--no-build"
-			build_and_run_command(project, no_build, on_stdout)
-		elseif selected_cmd == commands.Run then
-			run_command(project, no_build, on_stdout)
-		else
-			build_command(project, nil, on_stdout)
+			if selected_cmd == commands.Run then
+				run_command(project, "", on_stdout)
+			else
+				build_command(project, nil, on_stdout)
+			end
 		end
 	end
 end
@@ -203,7 +276,7 @@ local function run_selection(prompt_bufnr, map)
 end
 
 --- @note runs the previously selected command with the previously selected files
-M.dotnet_run = vim.api.nvim_create_user_command("DotnetRunProject", function()
+M.dotnet_run_previous = vim.api.nvim_create_user_command("DotnetRunPrevious", function()
 	if table.getn(files) < 1 then
 		print("no files selected. Run command DotnetStartPicker to launch pickers")
 	else
@@ -235,7 +308,6 @@ M.run = vim.api.nvim_create_user_command("DotnetStartPicker", function()
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
 					local selection = action_state.get_selected_entry()
-					print(vim.inspect(selection))
 					selected_cmd = selection[1]
 					start_project_picker(opts)
 				end)
