@@ -59,7 +59,7 @@ end
 ---@param project_path string: path to one of the project files to use as a starting point to find a sln file by searching up the dir tree
 local function find_sln_file(project_path)
 	local sln_files = vim.fs.find(function(name, path)
-		return name:match(".*%.sln$")
+		return name:match(".*%.sln%$")
 	end, {
 		limit = 1,
 		type = "file",
