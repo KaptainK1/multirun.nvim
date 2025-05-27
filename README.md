@@ -7,20 +7,20 @@ Multirun only aims at running the dotnet run or dotnet build commands on multipl
 ## Getting Started
 Run the MultirunStart command (or keymap) to launch the picker
  - The first picker will be the command to run
-  - build
-   - builds the selected projects
-  - run
-   - will build and run the selected projects and dependencies
-   - equalivent to running dotent run commands
-   - use this when the projects are in separate solutions (no shared code)
-  - build and run
-   - will run a single build command separatly then execute the run command for each project
-   - run command is equalivent to dotnet run --no-build
-   - use this when the projects to run are apart of the same solution
+   - build
+     - builds the selected projects
+   - run
+     - will build and run the selected projects and dependencies
+     - equalivent to running dotent run commands
+     - use this when the projects are in separate solutions (no shared code)
+   - build and run
+     - will run a single build command separatly then execute the run command for each project
+     - run command is equalivent to dotnet run --no-build
+     - use this when the projects to run are apart of the same solution
 
  - The second picker will be the projects to run
-  - utilizes telescopes multiselection feature by pressing Tab to select multiple files
-  - when pressing enter, the commands will be executed
+   - utilizes telescopes multiselection feature by pressing Tab to select multiple files
+   - when pressing enter, the commands will be executed
 
 - To Stop the running commands execute MultirunStopRunningProjects or the keymap
 - To rerun the previous command on the previously selected projects run MultirunPrevious or keymap (this skips the picker)
@@ -29,11 +29,11 @@ Run the MultirunStart command (or keymap) to launch the picker
 ## Commands
 There are 4 commands available to be ran as a user command or with a keymap
 - Multirun
- - Opens the command and project file pickers then executes the commands
+  - Opens the command and project file pickers then executes the commands
 - MultirunPrevious
- - Runs the previously selected command on the previously selected files
+  - Runs the previously selected command on the previously selected files
 - MultirunCloseProjectWindows
- - Closes the project window, but does not stop the running projects
+  - Closes the project window, but does not stop the running projects
 - MultirunStopRunningProjects
 
 ## Setup
