@@ -5,6 +5,12 @@ Multirun is a neovim dotnet plugin that supports running, building, and stopping
 Multirun only aims at running the dotnet run or dotnet build commands on multiple projects (or single projects) simaltanously. If other dotnet commands are needed then use easy dotnet too
 
 ## Getting Started
+### Prerequisites
+- fd
+  - https://github.com/sharkdp/fd
+- telescope
+  - https://github.com/nvim-telescope/telescope.nvim
+### Running
 Run the MultirunStart command (or keymap) to launch the picker
  - The first picker will be the command to run
    - build
