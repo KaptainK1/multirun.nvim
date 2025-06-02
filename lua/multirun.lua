@@ -35,7 +35,7 @@ local config = {
 	auto_close_project_window = true,
 }
 
-M.setup = function(opts)
+function M.setup(opts)
 	opts = opts or {}
 	config.auto_close_project_window = opts.auto_close_project_window or true
 end
@@ -71,12 +71,17 @@ local function find_sln_file(project_path)
 end
 
 ---@note command for stopping all running processes and closes the windown and buffers
-M.multirun_stop_projects = vim.api.nvim_create_user_command("MultirunStopRunningProjects", function()
+function M.multirun_stop_projects()
 	for _, pid in ipairs(pids) do
 		vim.uv.kill(pid, "sigterm")
 		--vim.system({ "kill", "-15", pid }, { text = true })
 	end
 	pids = {}
+end
+
+---@note command for stopping all running processes and closes the windown and buffers
+vim.api.nvim_create_user_command("MultirunStopRunningProjects", function()
+	M.multirun_stop_projects()
 end, { nargs = 0 })
 
 ---@param project string: project file to be acted on
@@ -111,7 +116,7 @@ local function run_command(project, no_build, on_stdout)
 end
 
 ---@note command to close project windows and buffers WITHOUT SAVING.
-M.multirun_close_project_windows = vim.api.nvim_create_user_command("MultirunCloseProjectWindows", function()
+function M.multirun_close_project_windows()
 	if project_window ~= -1 then
 		local project_wins = vim.api.nvim_tabpage_list_wins(project_window)
 		for _, win in ipairs(project_wins) do
@@ -121,9 +126,14 @@ M.multirun_close_project_windows = vim.api.nvim_create_user_command("MultirunClo
 		end
 		project_window = -1
 	end
+end
+
+---@note command to close project windows and buffers WITHOUT SAVING.
+vim.api.nvim_create_user_command("MultirunCloseProjectWindows", function()
+	M.multirun_close_project_windows()
 end, { nargs = 0 })
 
-local function create_window(create_new_window)
+local function create_window(create_new_window, title)
 	local pagenr = vim.api.nvim_tabpage_get_number(project_window)
 	vim.api.nvim_command(pagenr .. "tabn")
 
@@ -135,6 +145,7 @@ local function create_window(create_new_window)
 		win = vim.api.nvim_open_win(buf, false, {
 			split = "right",
 			win = 0,
+			title = title,
 		})
 	else
 		win = vim.api.nvim_tabpage_get_win(project_window)
@@ -151,7 +162,7 @@ local function build_and_run_command(solution)
 		vim.schedule(function()
 			local create_new_window = false
 			for _, project in ipairs(files) do
-				local buf = create_window(create_new_window)
+				local buf = create_window(create_new_window, project)
 				create_new_window = true
 				local on_stdout_run = function(err, data)
 					if not data or data ~= "" then
@@ -174,7 +185,7 @@ local function build_and_run_command(solution)
 		end)
 	end
 
-	local buf = create_window(false)
+	local buf = create_window(false, solution)
 
 	local on_stdout_build = function(err, data)
 		if not data or data ~= "" then
@@ -215,7 +226,7 @@ local function execute_command()
 		local create_new_window = false
 
 		for _, project in pairs(files) do
-			local buf = create_window(create_new_window)
+			local buf = create_window(create_new_window, project)
 			create_new_window = true
 
 			local on_stdout = function(err, data)
@@ -261,12 +272,17 @@ local function run_selection(prompt_bufnr, map)
 end
 
 --- @note runs the previously selected command with the previously selected files
-M.multirun_previous = vim.api.nvim_create_user_command("MultirunPrevious", function()
+function M.multirun_previous()
 	if table.getn(files) < 1 then
 		print("no files selected. Run command DotnetStartPicker to launch pickers")
 	else
 		execute_command()
 	end
+end
+
+--- @note runs the previously selected command with the previously selected files
+vim.api.nvim_create_user_command("MultirunPrevious", function()
+	M.multirun_previous()
 end, { nargs = 0 })
 
 local function start_project_picker(opts)
@@ -276,11 +292,7 @@ local function start_project_picker(opts)
 	builtin.find_files(opts)
 end
 
---- @note opens command picker then file picker. Commands are: Run, BuildAndRun, and Build
---- @enum Run will build then run the project, runs the dotnet run command so should be used for separate Projects
---- @enum BuildAndRun will execute a build command separatly then Run command once the build is done. Runs the dotnet run --nobuild command
---- @enum Build runs the build command for the selected project
-M.multirun = vim.api.nvim_create_user_command("MultirunStart", function()
+function M.multirun()
 	local opts = require("telescope.themes").get_dropdown({})
 	pickers
 		.new(opts, {
@@ -300,6 +312,14 @@ M.multirun = vim.api.nvim_create_user_command("MultirunStart", function()
 			end,
 		})
 		:find()
+end
+
+--- @note opens command picker then file picker. Commands are: Run, BuildAndRun, and Build
+--- @enum Run will build then run the project, runs the dotnet run command so should be used for separate Projects
+--- @enum BuildAndRun will execute a build command separatly then Run command once the build is done. Runs the dotnet run --nobuild command
+--- @enum Build runs the build command for the selected project
+vim.api.nvim_create_user_command("MultirunStart", function()
+	M.multirun()
 end, { nargs = 0 })
 
 return M
