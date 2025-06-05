@@ -145,14 +145,15 @@ local function create_window(create_new_window, title)
 		win = vim.api.nvim_open_win(buf, false, {
 			split = "right",
 			win = 0,
-			title = title,
 		})
 	else
 		win = vim.api.nvim_tabpage_get_win(project_window)
 		buf = vim.api.nvim_win_get_buf(win)
 	end
-
 	vim.api.nvim_win_set_buf(win, buf)
+	vim.api.nvim_buf_call(buf, function()
+		vim.api.nvim_cmd({ cmd = "file", args = { title }, bang = false }, { output = false })
+	end)
 	return buf
 end
 
@@ -186,7 +187,6 @@ local function build_and_run_command(solution)
 	end
 
 	local buf = create_window(false, solution)
-
 	local on_stdout_build = function(err, data)
 		if not data or data ~= "" then
 			if data == nil then
