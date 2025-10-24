@@ -99,6 +99,7 @@ local function run_command(project, no_build, on_stdout, command)
 
 	local on_exit = function()
 		vim.schedule(function()
+			-- if the command was test, leave the buffer open so results can be seen before exiting
 			if config.auto_close_project_window and selected_cmd ~= commands.Test.value then
 				vim.cmd.MultirunCloseProjectWindows()
 			end
@@ -109,11 +110,11 @@ local function run_command(project, no_build, on_stdout, command)
 		end
 	end
 
+	-- use --project if we are running, test does not work with --project
 	local use_project = ""
-	if command == "run" then
+	if command == commands.Run.value then
 		use_project = "--project"
 	end
-	print(vim.inspect(use_project))
 
 	running_process = vim.system(
 		{ "dotnet", command, no_build, use_project, project },
@@ -176,7 +177,7 @@ local function build_and_run_command(solution, command)
 				local on_stdout_run = function(err, data)
 					if not data or data ~= "" then
 						if data == nil then
-							--print(vim.inspect(data))
+							print(vim.inspect(data))
 						else
 							local str = data:gsub("[\n\r]", " ")
 							vim.schedule(function()
@@ -198,7 +199,7 @@ local function build_and_run_command(solution, command)
 	local on_stdout_build = function(err, data)
 		if not data or data ~= "" then
 			if data == nil then
-				--print(vim.inspect(data))
+				print(vim.inspect(data))
 			else
 				local str = data:gsub("[\n\r]", " ")
 				vim.schedule(function()
@@ -227,7 +228,6 @@ local function execute_command()
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
 	project_window = tabs[last_tab]
-	print(vim.inspect(selected_cmd))
 	if selected_cmd == "" or selected_cmd == nil then
 		error("a command is required")
 	end
@@ -244,7 +244,7 @@ local function execute_command()
 			local on_stdout = function(err, data)
 				if not data or data ~= "" then
 					if data == nil then
-						--print(vim.inspect(data))
+						print(vim.inspect(data))
 					else
 						local str = data:gsub("[\n\r]", " ")
 						vim.schedule(function()
@@ -325,13 +325,7 @@ function M.multirun()
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
 					local selection = action_state.get_selected_entry()
-					local st = ""
-					for i, j in pairs(selection) do
-						st = " property: " .. i .. " value: " .. j .. ";" .. st
-					end
-					print(vim.inspect(st))
 					selected_cmd = selection.value
-					print(vim.inspect(selected_cmd))
 					start_project_picker(opts)
 				end)
 				return true
