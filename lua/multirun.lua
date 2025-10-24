@@ -109,8 +109,14 @@ local function run_command(project, no_build, on_stdout, command)
 		end
 	end
 
+	local use_project = ""
+	if command == "run" then
+		use_project = "--project"
+	end
+	print(vim.inspect(use_project))
+
 	running_process = vim.system(
-		{ "dotnet", command, no_build, "--project", project },
+		{ "dotnet", command, no_build, use_project, project },
 		{ text = true, stdout = on_stdout, stderr = on_stderr },
 		on_exit
 	)
@@ -262,6 +268,7 @@ local function run_selection(prompt_bufnr, map)
 	actions.select_default:replace(function()
 		local cur_picker = action_state.get_current_picker(prompt_bufnr)
 		local selections = cur_picker:get_multi_selection()
+		print(vim.inspect(selections))
 		files = {}
 
 		for _, value in ipairs(selections) do
