@@ -26,9 +26,11 @@ local files = {}
 local project_window = -1
 local pids = {}
 local commands = {
+	BuildAndRun = "brun",
+	BuildAndTest = "btest",
 	Build = "build",
 	Run = "run",
-	BuildAndRun = "build and run",
+	Test = "test",
 }
 local selected_cmd = commands.Run
 local config = {
@@ -87,7 +89,7 @@ end, { nargs = 0 })
 ---@param project string: project file to be acted on
 ---@param no_build string: --no-build parameter for dotnet run command
 ---@param on_stdout function: function to be passed to vim.system command for stdout
-local function run_command(project, no_build, on_stdout)
+local function run_command(project, no_build, on_stdout, command)
 	local running_process = {}
 
 	local on_stderr = function(err, data)
@@ -108,7 +110,7 @@ local function run_command(project, no_build, on_stdout)
 	end
 
 	running_process = vim.system(
-		{ "dotnet", "run", no_build, "--project", project },
+		{ "dotnet", command, no_build, "--project", project },
 		{ text = true, stdout = on_stdout, stderr = on_stderr },
 		on_exit
 	)
@@ -151,14 +153,14 @@ local function create_window(create_new_window, title)
 		buf = vim.api.nvim_win_get_buf(win)
 	end
 	vim.api.nvim_win_set_buf(win, buf)
-	vim.api.nvim_buf_call(buf, function()
-		vim.api.nvim_cmd({ cmd = "file", args = { title }, bang = false }, { output = false })
-	end)
+	--vim.api.nvim_buf_call(buf, function()
+	--	vim.api.nvim_cmd({ cmd = "file", args = { title }, bang = false }, { output = false })
+	--end)
 	return buf
 end
 
 ---@param solution string: project file to be acted on
-local function build_and_run_command(solution)
+local function build_and_run_command(solution, command)
 	local on_exit = function()
 		vim.schedule(function()
 			local create_new_window = false
@@ -181,7 +183,7 @@ local function build_and_run_command(solution)
 						end
 					end
 				end
-				run_command(project, "--no-build", on_stdout_run)
+				run_command(project, "--no-build", on_stdout_run, command)
 			end
 		end)
 	end
@@ -219,9 +221,10 @@ local function execute_command()
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
 	project_window = tabs[last_tab]
-	if selected_cmd == commands.BuildAndRun then
+	if selected_cmd == commands.BuildAndRun or selected_cmd == commands.BuildAndTest then
 		local sln = find_sln_file(files[1])
-		build_and_run_command(sln)
+		selected_cmd = string.sub(selected_cmd, 1)
+		build_and_run_command(sln, selected_cmd)
 	else
 		local create_new_window = false
 
@@ -246,10 +249,10 @@ local function execute_command()
 				end
 			end
 
-			if selected_cmd == commands.Run then
-				run_command(project, "", on_stdout)
-			else
+			if selected_cmd == commands.Build then
 				vim.system({ "dotnet", "build", project }, { text = true, stdout = on_stdout })
+			else
+				run_command(project, "", on_stdout, selected_cmd)
 			end
 		end
 	end
