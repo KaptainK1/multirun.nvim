@@ -325,7 +325,11 @@ function M.multirun()
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
 					local selection = action_state.get_selected_entry()
-					print(vim.inspect(selection))
+					local st = ""
+					for i, j in pairs(selection) do
+						st = " property: " .. i .. " value: " .. j .. ";" .. st
+					end
+					print(vim.inspect(st))
 					selected_cmd = selection[1].value
 					print(vim.inspect(selected_cmd))
 					start_project_picker(opts)
