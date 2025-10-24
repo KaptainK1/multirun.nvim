@@ -228,6 +228,9 @@ local function execute_command()
 	local last_tab = table.getn(tabs)
 	project_window = tabs[last_tab]
 	print(vim.inspect(selected_cmd))
+	if selected_cmd == "" or selected_cmd == nil then
+		error("a command is required")
+	end
 	if selected_cmd == commands.BuildAndRun.value or selected_cmd == commands.BuildAndTest.value then
 		local sln = find_sln_file(files[1])
 		build_and_run_command(sln, selected_cmd)
