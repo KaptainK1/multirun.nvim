@@ -32,7 +32,7 @@ local commands = {
 	Run = { key = "run", value = "run" },
 	Test = { key = "test", value = "test" },
 }
-local selected_cmd = commands.Run
+local selected_cmd = commands.Run.value
 local config = {
 	auto_close_project_window = true,
 }
@@ -99,7 +99,7 @@ local function run_command(project, no_build, on_stdout, command)
 
 	local on_exit = function()
 		vim.schedule(function()
-			if config.auto_close_project_window then
+			if config.auto_close_project_window and selected_cmd ~= commands.Test.value then
 				vim.cmd.MultirunCloseProjectWindows()
 			end
 		end)
