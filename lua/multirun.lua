@@ -170,7 +170,7 @@ local function build_and_run_command(solution, command)
 				local on_stdout_run = function(err, data)
 					if not data or data ~= "" then
 						if data == nil then
-							print(vim.inspect(data))
+							--print(vim.inspect(data))
 						else
 							local str = data:gsub("[\n\r]", " ")
 							vim.schedule(function()
@@ -192,7 +192,7 @@ local function build_and_run_command(solution, command)
 	local on_stdout_build = function(err, data)
 		if not data or data ~= "" then
 			if data == nil then
-				print(vim.inspect(data))
+				--print(vim.inspect(data))
 			else
 				local str = data:gsub("[\n\r]", " ")
 				vim.schedule(function()
@@ -221,7 +221,7 @@ local function execute_command()
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
 	project_window = tabs[last_tab]
-	vim.print(vim.inspect(selected_cmd))
+	print(vim.inspect(selected_cmd))
 	if selected_cmd == commands.BuildAndRun.value or selected_cmd == commands.BuildAndTest.value then
 		local sln = find_sln_file(files[1])
 		build_and_run_command(sln, selected_cmd)
@@ -235,7 +235,7 @@ local function execute_command()
 			local on_stdout = function(err, data)
 				if not data or data ~= "" then
 					if data == nil then
-						print(vim.inspect(data))
+						--print(vim.inspect(data))
 					else
 						local str = data:gsub("[\n\r]", " ")
 						vim.schedule(function()
