@@ -330,7 +330,7 @@ function M.multirun()
 						st = " property: " .. i .. " value: " .. j .. ";" .. st
 					end
 					print(vim.inspect(st))
-					selected_cmd = selection[1].value
+					selected_cmd = selection.value
 					print(vim.inspect(selected_cmd))
 					start_project_picker(opts)
 				end)
