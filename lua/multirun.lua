@@ -325,6 +325,7 @@ function M.multirun()
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
 					local selection = action_state.get_selected_entry()
+					print(vim.inspect(selection))
 					selected_cmd = selection[1]
 					start_project_picker(opts)
 				end)
