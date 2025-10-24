@@ -304,9 +304,9 @@ function M.multirun()
 				results = { commands.BuildAndRun, commands.BuildAndTest, commands.Build, commands.Test, commands.Build },
 				entry_maker = function(entry)
 					return {
-						value = entry.key,
-						display = entry.value,
-						ordinal = entry.value,
+						value = entry.value,
+						display = entry.key,
+						ordinal = entry.key,
 					}
 				end,
 			}),
