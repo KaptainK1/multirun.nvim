@@ -26,11 +26,11 @@ local files = {}
 local project_window = -1
 local pids = {}
 local commands = {
-	BuildAndRun = "brun",
-	BuildAndTest = "btest",
-	Build = "build",
-	Run = "run",
-	Test = "test",
+	BuildAndRun = { key = "build and run", value = "run" },
+	BuildAndTest = { key = "build and test", value = "test" },
+	Build = { key = "build", value = "build" },
+	Run = { key = "run", value = "run" },
+	Test = { key = "test", value = "test" },
 }
 local selected_cmd = commands.Run
 local config = {
@@ -301,7 +301,14 @@ function M.multirun()
 		.new(opts, {
 			prompt_title = "Dotnet Commands",
 			finder = finders.new_table({
-				results = { commands.Build, commands.Run, commands.BuildAndRun },
+				results = { commands.BuildAndRun, commands.BuildAndTest, commands.Build, commands.Test, commands.Build },
+				entry_maker = function(entry)
+					return {
+						value = entry.key,
+						display = entry.value,
+						ordinal = entry.value,
+					}
+				end,
 			}),
 			sorter = conf.generic_sorter(opts),
 			attach_mappings = function(prompt_bufnr, map)
