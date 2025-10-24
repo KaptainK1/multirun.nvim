@@ -221,9 +221,9 @@ local function execute_command()
 	local tabs = vim.api.nvim_list_tabpages()
 	local last_tab = table.getn(tabs)
 	project_window = tabs[last_tab]
-	if selected_cmd == commands.BuildAndRun or selected_cmd == commands.BuildAndTest then
+	vim.print(vim.inspect(selected_cmd))
+	if selected_cmd == commands.BuildAndRun.value or selected_cmd == commands.BuildAndTest.value then
 		local sln = find_sln_file(files[1])
-		selected_cmd = string.sub(selected_cmd, 1)
 		build_and_run_command(sln, selected_cmd)
 	else
 		local create_new_window = false
@@ -249,7 +249,7 @@ local function execute_command()
 				end
 			end
 
-			if selected_cmd == commands.Build then
+			if selected_cmd == commands.Build.value then
 				vim.system({ "dotnet", "build", project }, { text = true, stdout = on_stdout })
 			else
 				run_command(project, "", on_stdout, selected_cmd)
